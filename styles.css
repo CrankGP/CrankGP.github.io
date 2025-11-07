@@ -1,9 +1,0 @@
-html, body {
-  margin: 0;
-  padding: 0;
-}
-canvas {
-  background: white !important;  /* overrides any black from CSS */
-  display: block;                /* removes default inline spacing */
-  margin: 0 auto;                /* optional: center canvas */
-}
