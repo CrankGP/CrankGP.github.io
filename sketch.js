@@ -1,5 +1,5 @@
-let mapImgColored;
-let mapImgMask;
+let mapImgColored;   // colored Denmark map
+let mapImgMask;      // black land / white sea
 let landPixels = [];
 
 let totalBirths = 58000;
@@ -8,26 +8,20 @@ let birthInterval = 0;
 let birthsSoFar = 0;
 let lastBirthTime = 0;
 
-let scaleX, scaleY; // scaling factors for responsive canvas
-
 function preload() {
-  mapImgColored = loadImage("denmark_colored.png"); // real colored map
-  mapImgMask = loadImage("denmark_mask.png");       // black land / white sea
+  mapImgColored = loadImage("denmark_colored.png"); 
+  mapImgMask = loadImage("denmark_mask.png");    
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight); // responsive canvas
-
-  // Compute scale to fit window while maintaining aspect ratio
-  scaleX = width / mapImgMask.width;
-  scaleY = height / mapImgMask.height;
-
-  // Draw scaled map
-  background(255);
-  image(mapImgColored, 0, 0, mapImgMask.width * scaleX, mapImgMask.height * scaleY);
+  let canvas = createCanvas(mapImgMask.width, mapImgMask.height);
+  canvas.parent('canvas-container'); // place canvas in container
   noStroke();
 
-  // Precompute land pixels at original image coordinates
+  // Draw map at original size
+  image(mapImgColored, 0, 0);
+
+  // Precompute land pixels
   mapImgMask.loadPixels();
   for (let y = 0; y < mapImgMask.height; y++) {
     for (let x = 0; x < mapImgMask.width; x++) {
@@ -59,19 +53,17 @@ function draw() {
   }
 
   if (millis() - lastBirthTime >= birthInterval) {
-    // Pick a random land pixel (original coordinates)
     let idx = floor(random(landPixels.length));
-    let px = landPixels[idx].x * scaleX;
-    let py = landPixels[idx].y * scaleY;
+    let px = landPixels[idx].x;
+    let py = landPixels[idx].y;
 
-    drawFlower(px, py, 8 * ((scaleX + scaleY) / 2)); // scale flower size
+    drawFlower(px, py, 8);
 
     birthsSoFar++;
     lastBirthTime = millis();
   }
 }
 
-// Draw a top-view flower at (x, y)
 function drawFlower(x, y, size) {
   push();
   translate(x, y);
@@ -94,13 +86,4 @@ function drawFlower(x, y, size) {
   fill(centerColor);
   ellipse(0, 0, size / 2, size / 2);
   pop();
-}
-
-// Resize canvas when window changes
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  scaleX = width / mapImgMask.width;
-  scaleY = height / mapImgMask.height;
-  background(255);
-  image(mapImgColored, 0, 0, mapImgMask.width * scaleX, mapImgMask.height * scaleY);
 }
