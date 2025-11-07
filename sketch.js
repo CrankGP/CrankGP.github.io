@@ -1,6 +1,5 @@
 let mapImgColored;   // colored Denmark map
 let mapImgMask;      // black land / white sea
-let backgroundImg;   // optional background image
 let landPixels = [];
 
 let totalBirths = 58000;
@@ -10,23 +9,19 @@ let birthsSoFar = 0;
 let lastBirthTime = 0;
 
 function preload() {
-  backgroundImg = loadImage("background.jpg");   // your background image
   mapImgColored = loadImage("denmark_colored.png"); 
   mapImgMask = loadImage("denmark_mask.png");    
 }
 
 function setup() {
-  createCanvas(mapImgMask.width, mapImgMask.height);
-
-  // Draw background first
-  image(backgroundImg, 0, 0, width, height);
-
-  // Draw the colored map on top (original size)
-  image(mapImgColored, 0, 0);
-
+  let canvas = createCanvas(mapImgMask.width, mapImgMask.height);
+  canvas.parent('canvas-container'); // place canvas in container
   noStroke();
 
-  // Precompute land pixels from mask
+  // Draw map at original size
+  image(mapImgColored, 0, 0);
+
+  // Precompute land pixels
   mapImgMask.loadPixels();
   for (let y = 0; y < mapImgMask.height; y++) {
     for (let x = 0; x < mapImgMask.width; x++) {
@@ -42,7 +37,6 @@ function setup() {
   }
   console.log("Total land pixels:", landPixels.length);
 
-  // Compute interval per birth
   birthInterval = simulationDuration / totalBirths;
   birthsSoFar = 0;
   lastBirthTime = millis();
