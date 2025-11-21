@@ -112,7 +112,6 @@ function draw() {
 
   // Draw faint circle to show blocked area for headlines
   noFill();
-  strokeWeight(2 / scaleFactor);
   ellipse(circleCenterX, circleCenterY, circleRadius * 2, circleRadius * 2);
 
   // Add new flower
