@@ -112,7 +112,6 @@ function draw() {
 
   // Draw faint circle to show blocked area for headlines
   noFill();
-  stroke(255, 100); // faint white
   strokeWeight(2 / scaleFactor);
   ellipse(circleCenterX, circleCenterY, circleRadius * 2, circleRadius * 2);
 
