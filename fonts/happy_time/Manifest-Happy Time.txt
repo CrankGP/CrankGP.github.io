@@ -1,0 +1,3 @@
+This font was forked from TeX Gyre Termes on 11/27/2014, and modified to a swash italic style on 1/26/2015 by Robert Jablonski, & Mew Too (Cannot Into Space Fonts).
+
+A couple fixes and new weights were made on 4/26/2015 by Robert Jablonski & Mew Too (Cannot Into Space Fonts).
