@@ -4,7 +4,6 @@ let mapImgMask;
 let landPixels = [];
 let waterPixels = [];
 let allowedHeadlinePixels = [];
-let flowers = [];
 
 let totalBirths = 57079;
 let simulationDuration = 1000 * 60 * 1000;
@@ -15,7 +14,7 @@ let lastFlowerTime = 0;
 // RSS
 let headlines = [];
 let shownHeadlines = [];
-let headlineInterval = 2 * 60 * 1000;
+let headlineInterval = 30 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
 
 // Layers
@@ -24,21 +23,32 @@ let mapLayer, flowerLayer;
 // Scaling
 let scaleFactor = 1;
 
-// Circle around map for headline constraint
+// Circle around map for headline restriction
 let circleCenterX, circleCenterY;
 let circleRadius;
+
+// Fonts
+let fonts = [];
 
 function preload() {
   bgImg = loadImage("background2.jpg");
   mapImgColored = loadImage("denmark_colored2.png");
   mapImgMask = loadImage("denmark_mask2.png");
+
+  // Preload multiple fonts
+  fonts.push(loadFont("fonts/Roboto_Condensed-Regular.ttf"));
+  fonts.push(loadFont("fonts/arial_narrow_7.ttf"));
+  fonts.push(loadFont("fonts/HappyTime.otf"));
+  fonts.push(loadFont("fonts/Times New Normal Regular.ttf"));
+  fonts.push(loadFont("fonts/NewYork.otf"));
+  fonts.push(loadFont("fonts/Sunflower.otf"));
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
 
   noStroke();
-  textAlign(CENTER, CENTER);
+  textAlign(LEFT, TOP);
   textSize(16);
   fill(255);
 
@@ -66,7 +76,7 @@ function setup() {
   birthInterval = simulationDuration / totalBirths;
   lastFlowerTime = millis();
 
-  // Compute circle around Denmark land (hugging black pixels)
+  // Compute bounding circle for Denmark
   let minX = mapImgColored.width, maxX = 0;
   let minY = mapImgColored.height, maxY = 0;
   for (let p of landPixels) {
@@ -77,44 +87,42 @@ function setup() {
   }
   circleCenterX = (minX + maxX) / 2;
   circleCenterY = (minY + maxY) / 2;
-  circleRadius = max(maxX - minX, maxY - minY) / 2 * 1.05; // 5% padding
+  circleRadius = max(maxX - minX, maxY - minY) / 2 * 1.05;
 
-  // Precompute allowed headline positions outside the circle
+  // Allowed headline pixels = water outside circle
   for (let p of waterPixels) {
     let d = dist(p.x, p.y, circleCenterX, circleCenterY);
     if (d >= circleRadius) allowedHeadlinePixels.push(p);
   }
 
-  // Load RSS and show first headline immediately
+  // Load RSS
   let rssURL = "https://verdensbedstenyheder.dk/feed/";
   let apiURL = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rssURL);
   loadRSS(apiURL);
 
   lastHeadlineTime = millis();
-
   updateScale();
 }
 
 function draw() {
   background(0);
 
-  // Draw scaled background
+  // Background
   image(bgImg, 0, 0, width, height);
 
+  // Draw map & flowers
   push();
-  translate((width - mapImgColored.width * scaleFactor) / 2, 
+  translate((width - mapImgColored.width * scaleFactor) / 2,
             (height - mapImgColored.height * scaleFactor) / 2);
   scale(scaleFactor);
 
-  // Draw map and flowers
   image(mapLayer, 0, 0);
   image(flowerLayer, 0, 0);
 
-  // Draw faint circle to show blocked area for headlines
   noFill();
   ellipse(circleCenterX, circleCenterY, circleRadius * 2, circleRadius * 2);
 
-  // Add new flower
+  // Flower spawning
   if (birthsSoFar < totalBirths && millis() - lastFlowerTime >= birthInterval && landPixels.length > 0) {
     let idx = floor(random(landPixels.length));
     let px = landPixels[idx].x;
@@ -125,55 +133,14 @@ function draw() {
     lastFlowerTime = millis();
   }
 
-  // Add headline every 2 minutes
-  let now = millis();
-  if (headlines.length > 0 && now - lastHeadlineTime >= headlineInterval) {
-    let headlineText = headlines.shift();
-
-    if (allowedHeadlinePixels.length > 0) {
-      let px, py;
-      let attempts = 0;
-
-      do {
-        let idx = floor(random(allowedHeadlinePixels.length));
-        px = allowedHeadlinePixels[idx].x;
-        py = allowedHeadlinePixels[idx].y;
-
-        // Convert to canvas coordinates for checking
-        let canvasX = px * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
-        let canvasY = py * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
-
-        let cX = circleCenterX * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
-        let cY = circleCenterY * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
-
-        if (dist(canvasX, canvasY, cX, cY) >= circleRadius * scaleFactor) break;
-        attempts++;
-      } while (attempts < 100);
-
-      if (attempts < 100) {
-        shownHeadlines.push({ text: headlineText, x: px, y: py });
-      }
-    }
-
-    lastHeadlineTime = now;
-  }
-
-  // Draw headlines scaled with map
-  for (let h of shownHeadlines) {
-    push();
-    translate((width - mapImgColored.width * scaleFactor) / 2,
-              (height - mapImgColored.height * scaleFactor) / 2);
-    scale(scaleFactor);
-    fill(255);
-    noStroke();
-    textSize(16 / scaleFactor);
-    text(h.text, h.x, h.y);
-    pop();
-  }
-
   pop();
 
-  // Completion message
+  // Headline logic
+  handleHeadlines();
+
+  // Draw headlines
+  drawHeadlines();
+
   if (birthsSoFar >= totalBirths) {
     fill(0);
     textSize(24);
@@ -182,6 +149,120 @@ function draw() {
   }
 }
 
+//
+// HEADLINE LOGIC + WRAPPING + RANDOM FONTS + WINDOW CONSTRAINT
+//
+function handleHeadlines() {
+  let now = millis();
+
+  if (headlines.length > 0 && now - lastHeadlineTime >= headlineInterval) {
+    addHeadline(headlines.shift());
+    lastHeadlineTime = now;
+  }
+}
+
+// Add headline with overlap check, wrapping, random font, and inside-window constraint
+function addHeadline(text) {
+  let attempts = 0;
+
+  while (attempts < 200) {
+    let p = random(allowedHeadlinePixels);
+    let px = p.x;
+    let py = p.y;
+
+    let screenX = px * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
+    let screenY = py * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
+
+    // Distance from circle to limit width
+    let dx = screenX - (circleCenterX * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2);
+    let dy = screenY - (circleCenterY * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2);
+    let distanceToCenter = sqrt(dx*dx + dy*dy);
+    let maxWidth = distanceToCenter - circleRadius * scaleFactor - 2;
+    maxWidth = max(maxWidth, 50); // minimum width
+
+    // Ensure headline stays inside canvas horizontally
+    maxWidth = min(maxWidth, width - screenX - 10);
+
+    // Ensure headline stays inside canvas vertically
+    let maxHeight = height - screenY - 10;
+    if (maxWidth < 50 || maxHeight < 20) {
+      attempts++;
+      continue; // try new random position
+    }
+
+    let temp = {
+      text,
+      x: px,
+      y: py,
+      screenX,
+      screenY,
+      alpha: 0,
+      w: maxWidth,
+      h: textAscent() * 1.2,
+      font: random(fonts)
+    };
+
+    // Check overlap
+    let ok = true;
+    for (let h of shownHeadlines) {
+      h.screenX = h.x * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
+      h.screenY = h.y * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
+      if (headlinesOverlap(temp, h)) ok = false;
+    }
+
+    if (ok) {
+      shownHeadlines.push(temp);
+      return;
+    }
+
+    attempts++;
+  }
+}
+
+function headlinesOverlap(h1, h2) {
+  let pad = 6;
+
+  let x1 = h1.screenX;
+  let y1 = h1.screenY;
+  let x2 = x1 + h1.w;
+  let y2 = y1 + h1.h;
+
+  let x3 = h2.screenX;
+  let y3 = h2.screenY;
+  let x4 = x3 + h2.w;
+  let y4 = y3 + h2.h;
+
+  return !(x2 + pad < x3 ||
+           x1 > x4 + pad ||
+           y2 + pad < y3 ||
+           y1 > y4 + pad);
+}
+
+// Draw headlines with fade-in, left-aligned wrapping, random font
+function drawHeadlines() {
+  push();
+  textSize(18);
+  noStroke();
+
+  for (let h of shownHeadlines) {
+    h.screenX = h.x * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
+    h.screenY = h.y * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
+
+    h.alpha = min(h.alpha + 2, 255);
+    fill(255, h.alpha);
+
+    textFont(h.font);
+    textAlign(LEFT, TOP);
+    textWrap(WORD);
+    text(h.text, h.screenX, h.screenY, h.w);
+  }
+
+  pop();
+}
+
+//
+// FLOWERS
+//
 function drawFlowerOnLayer(layer, x, y, size) {
   layer.push();
   layer.translate(x, y);
@@ -203,36 +284,17 @@ function drawFlowerOnLayer(layer, x, y, size) {
   layer.pop();
 }
 
+//
+// RSS LOADING (first headline immediately shown)
+//
 function loadRSS(apiURL) {
   fetch(apiURL)
     .then(res => res.json())
     .then(data => {
       if (data.status === "ok" && data.items) {
         headlines = data.items.map(item => item.title);
-
-        // Show first headline immediately
-        if (headlines.length > 0 && allowedHeadlinePixels.length > 0) {
-          let idx = floor(random(allowedHeadlinePixels.length));
-          let px = allowedHeadlinePixels[idx].x;
-          let py = allowedHeadlinePixels[idx].y;
-
-          let firstHeadline = headlines.shift();
-
-          // Convert map coords to canvas
-          let canvasX = px * scaleFactor + (width - mapImgColored.width * scaleFactor) / 2;
-          let canvasY = py * scaleFactor + (height - mapImgColored.height * scaleFactor) / 2;
-
-          let textW = textWidth(firstHeadline);
-          let textH = textAscent();
-          canvasX = constrain(canvasX, textW / 2, width - textW / 2);
-          canvasY = constrain(canvasY, textH / 2, height - textH / 2);
-
-          px = (canvasX - (width - mapImgColored.width * scaleFactor) / 2) / scaleFactor;
-          py = (canvasY - (height - mapImgColored.height * scaleFactor) / 2) / scaleFactor;
-
-          shownHeadlines.push({ text: firstHeadline, x: px, y: py });
-        }
-      } else console.error("RSS2JSON returned error:", data);
+        if (headlines.length > 0) addHeadline(headlines.shift());
+      }
     })
     .catch(err => console.error("RSS fetch error:", err));
 }
