@@ -6,7 +6,7 @@ let waterPixels = [];
 let allowedHeadlinePixels = [];
 
 let totalBirths = 57079;
-let simulationDuration = 120 * 60 * 1000;
+let simulationDuration = 500 * 60 * 1000;
 let birthInterval = 0;
 let birthsSoFar = 0;
 let lastFlowerTime = 0;
@@ -44,7 +44,7 @@ let wiggleSpeed = 0.001; // slower wiggle
 let borderMargin = 20;
 
 // Max number of animated flowers
-let maxActiveFlowers = 100;
+let maxActiveFlowers = 50;
 
 function preload() {
   bgImg = loadImage("background2.jpg");
