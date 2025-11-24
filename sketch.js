@@ -6,7 +6,7 @@ let waterPixels = [];
 let allowedHeadlinePixels = [];
 
 let totalBirths = 57079;
-let simulationDuration = 30 * 60 * 1000;
+let simulationDuration = 120 * 60 * 1000;
 let birthInterval = 0;
 let birthsSoFar = 0;
 let lastFlowerTime = 0;
