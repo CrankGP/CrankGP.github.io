@@ -286,7 +286,7 @@ function addHeadline(text) {
     // compute max width based on window border
     let maxWidth = width - borderMargin*2 - (screenX - borderMargin);
 
-    let maxLines = 3;
+    let maxLines = 5;
     let words = text.split(/\s+/);
     let lines = [];
     let line = "";
@@ -338,7 +338,7 @@ function headlinesOverlap(h1, h2) {
 
 function drawHeadlines() {
   push();
-  textSize(16);
+  textSize(24);
   noStroke();
   let now = millis();
 
