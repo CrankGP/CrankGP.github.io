@@ -18,7 +18,7 @@ let feedURLs = [
   "https://verdensbedstenyheder.dk/emner/mennesker/feed/"
 ];
 let headlines = [];
-let headlineInterval = 60 * 1000; // 30 seconds
+let headlineInterval = 5 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
 let shownHeadlines = [];
 
