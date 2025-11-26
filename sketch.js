@@ -20,7 +20,7 @@ let feedURLs = [
 let headlines = [];
 let headlineInterval = 60 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
-let shownHeadlines = [1];
+let shownHeadlines = [];
 
 // Layers
 let mapLayer, flowerLayer, staticFlowersLayer;
@@ -52,6 +52,11 @@ function preload() {
   mapImgMask = loadImage("denmark_mask2.png");
 
 
+  fonts.push(loadFont("fonts/Roboto_Condensed-Regular.ttf"));
+  fonts.push(loadFont("fonts/arial_narrow_7.ttf"));
+  fonts.push(loadFont("fonts/HappyTime.otf"));
+  fonts.push(loadFont("fonts/Times New Normal Regular.ttf"));
+  fonts.push(loadFont("fonts/NewYork.otf"));
   fonts.push(loadFont("fonts/Sunflower.otf"));
 
   counterFont = loadFont("fonts/Sunflower.otf");
@@ -349,7 +354,7 @@ function drawHeadlines() {
     }
 
     // Fade-out only if 5 or more headlines exist
-    if (shownHeadlines.length >= 10) {
+    if (shownHeadlines.length >= 1) {
       let timeSinceVisibleEnd = now - h.createdAt - h.visibleDuration;
       if (timeSinceVisibleEnd > 0) {
         let fadeProgress = constrain(timeSinceVisibleEnd / h.fadeDuration, 0, 1);
