@@ -281,7 +281,7 @@ function addHeadline(text) {
 
     let chosenFont = random(fonts);
     textFont(chosenFont);
-    textSize(16);
+    textSize(24);
 
     // compute max width based on window border
     let maxWidth = width - borderMargin*2 - (screenX - borderMargin);
