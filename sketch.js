@@ -18,9 +18,9 @@ let feedURLs = [
   "https://verdensbedstenyheder.dk/emner/mennesker/feed/"
 ];
 let headlines = [];
-let headlineInterval = 5 * 1000; // 30 seconds
+let headlineInterval = 60 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
-let shownHeadlines = [];
+let shownHeadlines = [1];
 
 // Layers
 let mapLayer, flowerLayer, staticFlowersLayer;
@@ -51,11 +51,7 @@ function preload() {
   mapImgColored = loadImage("denmark_colored2.png");
   mapImgMask = loadImage("denmark_mask2.png");
 
-  fonts.push(loadFont("fonts/Roboto_Condensed-Regular.ttf"));
-  fonts.push(loadFont("fonts/arial_narrow_7.ttf"));
-  fonts.push(loadFont("fonts/HappyTime.otf"));
-  fonts.push(loadFont("fonts/Times New Normal Regular.ttf"));
-  fonts.push(loadFont("fonts/NewYork.otf"));
+
   fonts.push(loadFont("fonts/Sunflower.otf"));
 
   counterFont = loadFont("fonts/Sunflower.otf");
@@ -281,12 +277,12 @@ function addHeadline(text) {
 
     let chosenFont = random(fonts);
     textFont(chosenFont);
-    textSize(24);
+    textSize(36);
 
     // compute max width based on window border
     let maxWidth = width - borderMargin*2 - (screenX - borderMargin);
 
-    let maxLines = 5;
+    let maxLines = 3;
     let words = text.split(/\s+/);
     let lines = [];
     let line = "";
@@ -338,7 +334,7 @@ function headlinesOverlap(h1, h2) {
 
 function drawHeadlines() {
   push();
-  textSize(24);
+  textSize(36);
   noStroke();
   let now = millis();
 
