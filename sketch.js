@@ -6,7 +6,7 @@ let waterPixels = [];
 let allowedHeadlinePixels = [];
 
 let totalBirths = 57079;
-let simulationDuration = 500 * 60 * 1000;
+let simulationDuration = 1000 * 60 * 1000;
 let birthInterval = 0;
 let birthsSoFar = 0;
 let lastFlowerTime = 0;
@@ -18,7 +18,7 @@ let feedURLs = [
   "https://verdensbedstenyheder.dk/emner/mennesker/feed/"
 ];
 let headlines = [];
-let headlineInterval = 5 * 1000; // 30 seconds
+let headlineInterval = 30 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
 let shownHeadlines = [];
 
@@ -27,7 +27,7 @@ let mapLayer, flowerLayer, staticFlowersLayer;
 
 // Scaling
 let scaleFactor = 1;
-let zoomFactor = 1.6; // zoom map & flowers
+let zoomFactor = 1.4; // zoom map & flowers
 
 // Map rectangle for headline constraint
 let mapRect;
@@ -41,16 +41,15 @@ let wiggleAmplitude = 5;
 let wiggleSpeed = 0.001; // slower wiggle
 
 // Border margin for headlines
-let borderMargin = 20;
+let borderMargin = 10;
 
 // Max number of animated flowers
-let maxActiveFlowers = 50;
+let maxActiveFlowers = 200;
 
 function preload() {
   bgImg = loadImage("background2.jpg");
   mapImgColored = loadImage("denmark_colored2.png");
   mapImgMask = loadImage("denmark_mask2.png");
-
 
   fonts.push(loadFont("fonts/Roboto_Condensed-Regular.ttf"));
   fonts.push(loadFont("fonts/arial_narrow_7.ttf"));
@@ -282,7 +281,7 @@ function addHeadline(text) {
 
     let chosenFont = random(fonts);
     textFont(chosenFont);
-    textSize(36);
+    textSize(16);
 
     // compute max width based on window border
     let maxWidth = width - borderMargin*2 - (screenX - borderMargin);
@@ -339,7 +338,7 @@ function headlinesOverlap(h1, h2) {
 
 function drawHeadlines() {
   push();
-  textSize(36);
+  textSize(16);
   noStroke();
   let now = millis();
 
@@ -354,7 +353,7 @@ function drawHeadlines() {
     }
 
     // Fade-out only if 5 or more headlines exist
-    if (shownHeadlines.length >= 1) {
+    if (shownHeadlines.length >= 5) {
       let timeSinceVisibleEnd = now - h.createdAt - h.visibleDuration;
       if (timeSinceVisibleEnd > 0) {
         let fadeProgress = constrain(timeSinceVisibleEnd / h.fadeDuration, 0, 1);
