@@ -6,7 +6,7 @@ let waterPixels = [];
 let allowedHeadlinePixels = [];
 
 let totalBirths = 57079;
-let simulationDuration = 1000 * 60 * 1000;
+let simulationDuration = 500 * 60 * 1000;
 let birthInterval = 0;
 let birthsSoFar = 0;
 let lastFlowerTime = 0;
@@ -328,7 +328,7 @@ function addHeadline(text) {
 }
 
 function headlinesOverlap(h1, h2) {
-  let pad = 6;
+  let pad = 1;
   let x1 = h1.screenX, y1 = h1.screenY;
   let x2 = x1 + width/2, y2 = y1 + textAscent()*1.2*h1.lines.length;
   let x3 = h2.screenX, y3 = h2.screenY;
