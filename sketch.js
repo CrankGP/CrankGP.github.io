@@ -18,7 +18,7 @@ let feedURLs = [
   "https://verdensbedstenyheder.dk/emner/mennesker/feed/"
 ];
 let headlines = [];
-let headlineInterval = 10 * 1000; // 30 seconds
+let headlineInterval = 15 * 1000; // 30 seconds
 let lastHeadlineTime = 0;
 let shownHeadlines = [];
 
@@ -41,14 +41,14 @@ let wiggleAmplitude = 5;
 let wiggleSpeed = 0.002; // slower wiggle
 
 // Border margin for headlines
-let borderMargin = 20;
+let borderMargin = 50;
 
 // Max number of animated flowers
 let maxActiveFlowers = 200;
 
 // Fade timings
 const DEFAULT_VISIBLE_DURATION = 30000; // 30s fully visible
-const DEFAULT_FADE_DURATION = 20000; // 10s fade
+const DEFAULT_FADE_DURATION = 20000; // 20s fade
 
 function preload() {
   bgImg = loadImage("background2.jpg");
