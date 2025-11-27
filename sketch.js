@@ -18,7 +18,7 @@ let feedURLs = [
   "https://verdensbedstenyheder.dk/emner/mennesker/feed/"
 ];
 let headlines = [];
-let headlineInterval = 15 * 1000; // 30 seconds
+let headlineInterval = 15 * 1000;
 let lastHeadlineTime = 0;
 let shownHeadlines = [];
 
@@ -27,7 +27,7 @@ let mapLayer, flowerLayer, staticFlowersLayer;
 
 // Scaling
 let scaleFactor = 1;
-let zoomFactor = 2.0; // zoom map & flowers
+let zoomFactor = 2.0;
 
 // Map rectangle for headline constraint
 let mapRect;
@@ -38,28 +38,25 @@ let counterFont;
 
 // Headline wiggle
 let wiggleAmplitude = 5;
-let wiggleSpeed = 0.002; // slower wiggle
+let wiggleSpeed = 0.002;
 
-// Border margin for headlines
-let borderMargin = 50;
+// Border margin
+let borderMargin = 20;
 
-// Max number of animated flowers
+// Max animated flowers
 let maxActiveFlowers = 200;
 
 // Fade timings
-const DEFAULT_VISIBLE_DURATION = 30000; // 30s fully visible
-const DEFAULT_FADE_DURATION = 20000; // 20s fade
+const DEFAULT_VISIBLE_DURATION = 30000;
+const DEFAULT_FADE_DURATION = 20000;
 
 function preload() {
   bgImg = loadImage("background2.jpg");
   mapImgColored = loadImage("denmark_colored2.png");
   mapImgMask = loadImage("denmark_mask2.png");
 
-  // your fonts here
   fonts.push(loadFont("fonts/HappyTime.otf"));
-
-
-  counterFont = loadFont("fonts/Sunflower.otf"); // still loaded but not used (counter removed)
+  counterFont = loadFont("fonts/Sunflower.otf");
 }
 
 function setup() {
@@ -79,24 +76,22 @@ function setup() {
   staticFlowersLayer = createGraphics(mapImgColored.width, mapImgColored.height);
   staticFlowersLayer.clear();
 
-  // compute land & water pixels from mask
+  // mask → land/water
   mapImgMask.loadPixels();
   for (let y = 0; y < mapImgMask.height; y++) {
     for (let x = 0; x < mapImgMask.width; x++) {
       let idx = (y * mapImgMask.width + x) * 4;
-      let r = mapImgMask.pixels[idx];
-      let g = mapImgMask.pixels[idx + 1];
-      let b = mapImgMask.pixels[idx + 2];
-      let brightnessValue = (r + g + b) / 3;
-      if (brightnessValue < 50) landPixels.push({ x, y });
-      else if (brightnessValue > 200) waterPixels.push({ x, y });
+      let v = (mapImgMask.pixels[idx] + mapImgMask.pixels[idx+1] + mapImgMask.pixels[idx+2]) / 3;
+
+      if (v < 50) landPixels.push({ x, y });
+      else if (v > 200) waterPixels.push({ x, y });
     }
   }
 
   birthInterval = simulationDuration / totalBirths;
   lastFlowerTime = millis();
 
-  // Map rectangle (bounding box of land)
+  // Map bounding rectangle
   let minX = mapImgColored.width, maxX = 0;
   let minY = mapImgColored.height, maxY = 0;
   for (let p of landPixels) {
@@ -107,7 +102,7 @@ function setup() {
   }
   mapRect = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 
-  // Allowed headline pixels = water pixels outside rectangle
+  // Allowed headline positions: water outside land box
   for (let p of waterPixels) {
     if (p.x < mapRect.x || p.x > mapRect.x + mapRect.w ||
         p.y < mapRect.y || p.y > mapRect.y + mapRect.h) {
@@ -121,11 +116,14 @@ function setup() {
 
 async function loadFeeds() {
   let all = [];
+
   for (let url of feedURLs) {
     let apiURL = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(url);
+
     try {
       let res = await fetch(apiURL);
       let data = await res.json();
+
       if (data && data.items) {
         data.items.forEach(item => {
           if (item.title) all.push(item.title);
@@ -135,12 +133,13 @@ async function loadFeeds() {
       console.log("Failed feed:", url, e);
     }
   }
+
   if (all.length > 1) shuffle(all, true);
+
   headlines = all;
 
   if (headlines.length > 0) {
-    // show first headline immediately
-    addHeadline(headlines.shift());
+    addHeadline(headlines[0]);    // show first immediately
     lastHeadlineTime = millis();
   }
 }
@@ -154,218 +153,211 @@ function draw() {
             (height - mapImgColored.height * scaleFactor * zoomFactor) / 2);
   scale(scaleFactor * zoomFactor);
 
-  // map and static flowers (frozen)
   image(mapLayer, 0, 0);
   image(staticFlowersLayer, 0, 0);
 
-  // animate active flowers
   flowerLayer.clear();
+
   for (let f of flowerLayer.flowers) {
     flowerLayer.push();
     flowerLayer.translate(f.x, f.y);
-    // only apply sway if active
-    let angleOffset = f.active ? sin(millis() * f.swaySpeed + f.phase) * PI / 4 : 0;
-    flowerLayer.rotate(f.baseAngle + angleOffset);
+
+    let offset = f.active ? sin(millis()*f.swaySpeed + f.phase) * PI/4 : 0;
+    flowerLayer.rotate(f.baseAngle + offset);
 
     for (let i = 0; i < f.petals; i++) {
-      let angle = TWO_PI / f.petals * i;
       flowerLayer.push();
-      flowerLayer.rotate(angle);
+      flowerLayer.rotate(TWO_PI/f.petals * i);
       flowerLayer.fill(f.color);
-      flowerLayer.ellipse(0, f.petalLength / 2, f.petalWidth, f.petalLength);
+      flowerLayer.ellipse(0, f.petalLength/2, f.petalWidth, f.petalLength);
       flowerLayer.pop();
     }
 
     flowerLayer.fill(f.centerColor);
-    flowerLayer.ellipse(0, 0, f.size / 2, f.size / 2);
+    flowerLayer.ellipse(0, 0, f.size/2, f.size/2);
     flowerLayer.pop();
   }
+
   image(flowerLayer, 0, 0);
   pop();
 
-  // spawn flowers at birthInterval
+  // flower spawning
   if (birthsSoFar < totalBirths && millis() - lastFlowerTime >= birthInterval && landPixels.length > 0) {
     let idx = floor(random(landPixels.length));
     let px = landPixels[idx].x;
     let py = landPixels[idx].y;
+
     drawFlowerOnLayer(flowerLayer, px, py, 8);
     landPixels.splice(idx, 1);
     birthsSoFar++;
     lastFlowerTime = millis();
   }
 
-  // Headlines
+  // headline timing
   handleHeadlines();
   drawHeadlines();
 
-  // completion message
   if (birthsSoFar >= totalBirths) {
     push();
     fill(255);
     textSize(28);
     textAlign(CENTER, CENTER);
-    text("Simulation complete 🌸", width / 2, height / 2);
+    text("Simulation complete 🌸", width/2, height/2);
     pop();
   }
 }
 
 function drawFlowerOnLayer(layer, x, y, baseSize) {
-  let petals = floor(random(5, 10));
+  let petals = floor(random(5,10));
   let size = baseSize * random(0.8, 1.5);
-  let petalLength = size * random(0.8, 1.2);
-  let petalWidth = size * random(0.4, 0.8);
-  let centerColor = color(255, 220, 0);
-  let petalColor = color(random(100, 255), random(100, 255), random(100, 255), 180);
+  let petalLength = size * random(0.8,1.2);
+  let petalWidth = size * random(0.4,0.8);
+  let centerColor = color(255,220,0);
+  let petalColor = color(random(100,255), random(100,255), random(100,255), 180);
   let swaySpeed = random(0.0005, 0.002);
   let baseAngle = random(TWO_PI);
 
-  // Deactivate flowers under the new flower (stop their sway)
+  // stop sway for flowers under this one
   for (let f of layer.flowers) {
-    let d = dist(x, y, f.x, f.y);
-    if (d < (size + f.size) / 2) f.active = false;
+    if (dist(x,y,f.x,f.y) < (size + f.size)/2) {
+      f.active = false;
+    }
   }
 
-  let newFlower = {
-    x, y, size, petals, petalLength, petalWidth, centerColor, color: petalColor,
-    baseAngle, swaySpeed, phase: random(TWO_PI), active: true
-  };
+  layer.flowers.push({
+    x, y, size,
+    petals,
+    petalLength,
+    petalWidth,
+    centerColor,
+    color: petalColor,
+    baseAngle,
+    swaySpeed,
+    phase: random(TWO_PI),
+    active: true
+  });
 
-  layer.flowers.push(newFlower);
-
-  // Limit active flowers: move oldest to static layer
+  // limit
   while (layer.flowers.length > maxActiveFlowers) {
-    let oldFlower = layer.flowers.shift();
-    drawFlowerToStaticLayer(staticFlowersLayer, oldFlower);
+    drawFlowerToStaticLayer(staticFlowersLayer, layer.flowers.shift());
   }
 }
 
 function drawFlowerToStaticLayer(layer, f) {
   layer.push();
   layer.translate(f.x, f.y);
-  layer.rotate(f.baseAngle); // static orientation
+  layer.rotate(f.baseAngle);
 
-  for (let i = 0; i < f.petals; i++) {
-    let angle = TWO_PI / f.petals * i;
+  for (let i=0; i < f.petals; i++) {
     layer.push();
-    layer.rotate(angle);
+    layer.rotate(TWO_PI/f.petals * i);
     layer.fill(f.color);
-    layer.ellipse(0, f.petalLength / 2, f.petalWidth, f.petalLength);
+    layer.ellipse(0, f.petalLength/2, f.petalWidth, f.petalLength);
     layer.pop();
   }
 
   layer.fill(f.centerColor);
-  layer.ellipse(0, 0, f.size / 2, f.size / 2);
+  layer.ellipse(0, 0, f.size/2, f.size/2);
   layer.pop();
 }
 
+// ------------------------------------------------------------------
+// ★ LOOPING HEADLINES IMPLEMENTATION
+// ------------------------------------------------------------------
 function handleHeadlines() {
   let now = millis();
-  if (headlines.length > 0 && now - lastHeadlineTime >= headlineInterval) {
-    addHeadline(headlines.shift());
+
+  // auto-fade handled in drawHeadlines()
+
+  // time for next headline?
+  if (now - lastHeadlineTime >= headlineInterval) {
+
+    if (headlines.length === 0) return;
+
+    // ★ instead of shift() (removes forever),
+    // we rotate the array to loop.
+    let text = headlines.shift();   // remove first
+    headlines.push(text);           // ★ put back at end → LOOP
+
+    addHeadline(text);
+
     lastHeadlineTime = now;
   }
 }
 
+// ------------------------------------------------------------------
+
 function addHeadline(text) {
   if (!text) return;
+
   let attempts = 0;
+
   while (attempts < 200) {
     let p = random(allowedHeadlinePixels);
-    let px = p.x;
-    let py = p.y;
+    let screenX = p.x * scaleFactor * zoomFactor
+        + (width - mapImgColored.width * scaleFactor * zoomFactor) / 2;
+    let screenY = p.y * scaleFactor * zoomFactor
+        + (height - mapImgColored.height * scaleFactor * zoomFactor) / 2;
 
-    let screenX = px * scaleFactor * zoomFactor + (width - mapImgColored.width * scaleFactor * zoomFactor) / 2;
-    let screenY = py * scaleFactor * zoomFactor + (height - mapImgColored.height * scaleFactor * zoomFactor) / 2;
-
-    // Respect top counter area (if any) and window border margins
     if (screenY < 50 + borderMargin ||
         screenX < borderMargin ||
-        screenX > width - borderMargin ||
-        screenY > height - borderMargin) {
+        screenX > width-borderMargin ||
+        screenY > height-borderMargin) {
       attempts++;
       continue;
     }
 
     let chosenFont = random(fonts);
+
     textFont(chosenFont);
     textSize(30);
 
-    // compute max width available from this x to right window border (respect margin)
-    // ensure maxWidth >= some minimum
-    let maxWidth = max(80, width - borderMargin * 2 - (screenX - borderMargin));
+    let maxWidth = max(80, width - borderMargin*2 - (screenX - borderMargin));
 
-    // Precompute lines (max 3), using the computed maxWidth
-    let maxLines = 20;
     let words = text.split(/\s+/);
     let lines = [];
     let line = "";
 
-    for (let i = 0; i < words.length; i++) {
-      let testLine = line ? line + " " + words[i] : words[i];
-      if (textWidth(testLine) <= maxWidth) {
-        line = testLine;
+    for (let w of words) {
+      let test = line ? line+" "+w : w;
+
+      if (textWidth(test) <= maxWidth) {
+        line = test;
       } else {
         lines.push(line);
-        line = words[i];
-        if (lines.length >= maxLines) {
-          line += "…";
-          break;
-        }
+        line = w;
       }
+      if (lines.length >= 20) break;
     }
-    if (lines.length < maxLines && line) lines.push(line);
+    if (lines.length < 3 && line) lines.push(line);
 
-    // headline timing
-    let fadeDuration = DEFAULT_FADE_DURATION; // 10s
-    let visibleDuration = DEFAULT_VISIBLE_DURATION; // 30s
-
-    // create headline object
-    let temp = {
+    shownHeadlines = [];     // only one headline at once
+    shownHeadlines.push({
       text,
       lines,
-      x: px,
-      y: py,
-      screenX,
-      screenY,
+      x:p.x, y:p.y,
+      screenX, screenY,
       alpha: 0,
       font: chosenFont,
       phase: random(TWO_PI),
       createdAt: millis(),
-      visibleDuration,
-      fadeDuration
-    };
-
-    // Make sure only one headline is visible at once:
-    shownHeadlines = []; // <--- clear any existing headline(s)
-
-    // Push the new headline and return
-    shownHeadlines.push(temp);
+      visibleDuration: DEFAULT_VISIBLE_DURATION,
+      fadeDuration: DEFAULT_FADE_DURATION
+    });
     return;
   }
-}
-
-function headlinesOverlap(h1, h2) {
-  // Not used now that we display only one headline at a time,
-  // but keep a simple overlap function for robustness
-  let pad = 6;
-  let x1 = h1.screenX, y1 = h1.screenY;
-  let x2 = x1 + width / 2, y2 = y1 + textAscent() * 1.2 * h1.lines.length;
-  let x3 = h2.screenX, y3 = h2.screenY;
-  let x4 = x3 + width / 2, y4 = y3 + textAscent() * 1.2 * h2.lines.length;
-  return !(x2 + pad < x3 || x1 > x4 + pad || y2 + pad < y3 || y1 > y4 + pad);
 }
 
 function drawHeadlines() {
   push();
   textSize(30);
   noStroke();
+
   let now = millis();
 
-  // iterate backwards in case we remove one while iterating (not strictly necessary here)
-  for (let i = shownHeadlines.length - 1; i >= 0; i--) {
+  for (let i = shownHeadlines.length-1; i >= 0; i--) {
     let h = shownHeadlines[i];
 
-    // compute constrained screen position (respect border)
     h.screenX = constrain(
       h.x * scaleFactor * zoomFactor + (width - mapImgColored.width * scaleFactor * zoomFactor) / 2,
       borderMargin,
@@ -377,44 +369,37 @@ function drawHeadlines() {
       height - borderMargin
     );
 
-    // Fade-in (simple incremental)
-    if (h.alpha < 255 && now - h.createdAt < h.visibleDuration) {
-      h.alpha = min(h.alpha + 4, 255); // slightly faster fade-in
+    if (now - h.createdAt < h.visibleDuration) {
+      h.alpha = min(h.alpha + 4, 255);
     }
 
-    // ALWAYS start fading after visibleDuration (we removed the ">=5" condition)
     let timeSinceVisibleEnd = now - h.createdAt - h.visibleDuration;
     if (timeSinceVisibleEnd > 0) {
       let fadeProgress = constrain(timeSinceVisibleEnd / h.fadeDuration, 0, 1);
       h.alpha = 255 * (1 - fadeProgress);
     }
 
-    // remove if fully faded
     if (h.alpha <= 0) {
       shownHeadlines.splice(i, 1);
       continue;
     }
 
     textFont(h.font);
-    textAlign(LEFT, TOP);
 
-    // wiggle offset
     let xOffset = sin(now * wiggleSpeed + h.phase) * wiggleAmplitude;
 
-    // draw each precomputed line, constrain each line so it doesn't go outside window
-    for (let j = 0; j < h.lines.length; j++) {
+    for (let j=0; j<h.lines.length; j++) {
       fill(255, h.alpha);
-      let lineText = h.lines[j];
 
-      // ensure the lineX is such that text doesn't overflow right border
       let rawX = h.screenX + xOffset;
-      let lineX = constrain(rawX, borderMargin, width - borderMargin - textWidth(lineText));
-      let lineY = constrain(h.screenY + j * textAscent() * 1.2, borderMargin, height - borderMargin - textAscent());
+      let safeX = constrain(rawX, borderMargin, width - borderMargin - textWidth(h.lines[j]));
+      let safeY = constrain(h.screenY + j * textAscent() * 1.2,
+                            borderMargin,
+                            height - borderMargin - textAscent());
 
-      text(lineText, lineX, lineY, width - borderMargin * 2);
+      text(h.lines[j], safeX, safeY);
     }
   }
-
   pop();
 }
 
@@ -424,5 +409,6 @@ function windowResized() {
 }
 
 function updateScale() {
-  scaleFactor = min(windowWidth / mapImgColored.width, windowHeight / mapImgColored.height);
+  scaleFactor = min(windowWidth/mapImgColored.width,
+                    windowHeight/mapImgColored.height);
 }
