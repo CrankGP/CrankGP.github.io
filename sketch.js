@@ -310,7 +310,7 @@ function addHeadline(text) {
     let chosenFont = random(fonts);
 
     textFont(chosenFont);
-    textSize(30);
+    textSize(40);
 
     let maxWidth = max(80, width - borderMargin*2 - (screenX - borderMargin));
 
@@ -350,7 +350,7 @@ function addHeadline(text) {
 
 function drawHeadlines() {
   push();
-  textSize(30);
+  textSize(40);
   noStroke();
 
   let now = millis();
